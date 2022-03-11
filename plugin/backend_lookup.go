@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"math"
 	"net"
 
 	"github.com/coredns/coredns/plugin/etcd/msg"
@@ -171,42 +170,13 @@ func SRV(ctx context.Context, b ServiceBackend, zone string, state request.Reque
 	dup := make(map[item]struct{})
 	lookup := make(map[string]struct{})
 
-	// Looping twice to get the right weight vs priority. This might break because we may drop duplicate SRV records latter on.
-	w := make(map[int]int)
 	for _, serv := range services {
-		weight := 100
-		if serv.Weight != 0 {
-			weight = serv.Weight
-		}
-		if _, ok := w[serv.Priority]; !ok {
-			w[serv.Priority] = weight
-			continue
-		}
-		w[serv.Priority] += weight
-	}
-	for _, serv := range services {
-		// Don't add the entry if the port is -1 (invalid). The kubernetes plugin uses port -1 when a service/endpoint
-		// does not have any declared ports.
-		if serv.Port == -1 {
-			continue
-		}
-		w1 := 100.0 / float64(w[serv.Priority])
-		if serv.Weight == 0 {
-			w1 *= 100
-		} else {
-			w1 *= float64(serv.Weight)
-		}
-		weight := uint16(math.Floor(w1))
-		// weight should be at least 1
-		if weight == 0 {
-			weight = 1
-		}
 
 		what, ip := serv.HostType()
 
 		switch what {
 		case dns.TypeCNAME:
-			srv := serv.NewSRV(state.QName(), weight)
+			srv := serv.NewSRV(state.QName(), uint16(serv.Weight))
 			records = append(records, srv)
 
 			if _, ok := lookup[srv.Target]; ok {
@@ -244,7 +214,7 @@ func SRV(ctx context.Context, b ServiceBackend, zone string, state request.Reque
 		case dns.TypeA, dns.TypeAAAA:
 			addr := serv.Host
 			serv.Host = msg.Domain(serv.Key)
-			srv := serv.NewSRV(state.QName(), weight)
+			srv := serv.NewSRV(state.QName(), uint16(serv.Weight))
 
 			if ok := isDuplicate(dup, srv.Target, "", srv.Port); !ok {
 				records = append(records, srv)
