@@ -381,18 +381,22 @@ func TXT(ctx context.Context, b ServiceBackend, zone string, state request.Reque
 
 // PTR returns the PTR records from the backend, only services that have a domain name as host are included.
 func PTR(ctx context.Context, b ServiceBackend, zone string, state request.Request, opt Options) (records []dns.RR, err error) {
+
 	services, err := b.Reverse(ctx, state, true, opt)
 	if err != nil {
+
 		return nil, err
 	}
 
 	dup := make(map[string]struct{})
 
 	for _, serv := range services {
+
 		if ip := net.ParseIP(serv.Host); ip == nil {
 			if _, ok := dup[serv.Host]; !ok {
 				dup[serv.Host] = struct{}{}
-				records = append(records, serv.NewPTR(state.QName(), serv.Host))
+
+				records = append(records, serv.NewPTR(state.QName(), serv.Text))
 			}
 		}
 	}
