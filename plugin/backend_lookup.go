@@ -389,8 +389,15 @@ func PTR(ctx context.Context, b ServiceBackend, zone string, state request.Reque
 	}
 
 	for _, serv := range services {
+
 		if ip := net.ParseIP(serv.Host); ip == nil {
-			records = append(records, serv.NewPTR(state.QName(), serv.Text))
+
+			//only add PTR entry if the there is a valid entry
+			if serv.Text != "" {
+				//reuses Text field to pickup target from etcd
+				records = append(records, serv.NewPTR(state.QName(), serv.Text))
+			}
+
 		}
 	}
 
