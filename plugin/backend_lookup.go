@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/coredns/coredns/plugin/etcd/msg"
 	"github.com/coredns/coredns/plugin/pkg/dnsutil"
@@ -370,7 +371,13 @@ func TXT(ctx context.Context, b ServiceBackend, zone string, state request.Reque
 		case dns.TypeTXT:
 			if _, ok := dup[serv.Host]; !ok {
 				dup[serv.Host] = struct{}{}
-				return append(records, serv.NewTXT(state.QName())), truncated, nil
+
+				//if we don't have any of the | delimters in our text we treat it as one TXT record with one string
+				if !strings.Contains(serv.Text, "|") {
+					return append(records, serv.NewTXT(state.QName(), false)), truncated, nil
+				}
+				//if we do have delimters we treat in as one TXT record with multiple strings
+				return append((records), serv.NewTXT(state.QName(), true)), truncated, nil
 			}
 
 		}

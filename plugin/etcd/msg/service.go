@@ -74,8 +74,12 @@ func (s *Service) NewCNAME(name string, target string) *dns.CNAME {
 }
 
 // NewTXT returns a new TXT record based on the Service.
-func (s *Service) NewTXT(name string) *dns.TXT {
-	return &dns.TXT{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: s.TTL}, Txt: split255(s.Text)}
+func (s *Service) NewTXT(name string, multistring bool) *dns.TXT {
+
+	if !multistring {
+		return &dns.TXT{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: s.TTL}, Txt: split255(s.Text)}
+	}
+	return &dns.TXT{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: s.TTL}, Txt: splitdelimit(s.Text)}
 }
 
 // NewPTR returns a new PTR record based on the Service.
@@ -160,6 +164,17 @@ func split255(s string) []string {
 	}
 
 	return sx
+}
+
+//splits the string into multiple strings delimited by |
+//assumes that each part is less than 255 byte chunks which it should be
+func splitdelimit(s string) []string {
+
+	var cache []string
+	items := strings.Split(s, "|")
+	cache = append(cache, items...)
+
+	return cache
 }
 
 // targetStrip strips "targetstrip" labels from the left side of the fully qualified name.
